@@ -306,16 +306,16 @@ if(isset($_POST["command"])){
 
         <form id="updatecreds" class="autoform">
             <p>
-                <input type="text" name="n" placeholder="DB_NAME (<?php echo wpconfig(" DB_NAME "); ?>)"/>
+                <input type="text" name="n" placeholder="DB_NAME (<?php echo wpconfig("DB_NAME"); ?>)"/>
             </p>
             <p>
-                <input type="text" name="u" placeholder="DB_USER (<?php echo wpconfig(" DB_USER "); ?>)"/>
+                <input type="text" name="u" placeholder="DB_USER (<?php echo wpconfig("DB_USER"); ?>)"/>
             </p>
             <p>
-                <input type="text" name="p" placeholder="DB_PASSWORD (Clear text!!!)" />
+                <input type="text" name="p" placeholder="DB_PASSWORD (*****)" />
             </p>
             <p>
-                <input type="submit" value="Update Config" /> <span id="status"></span>
+                <input type="submit" value="Update Config" /> <span class="status"></span>
             </p>
         </form>
 
