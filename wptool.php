@@ -245,28 +245,27 @@ if(isset($_POST["command"])){
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.css" />
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
         <script>
-            function Do(command) {
-                $("#" + command + "-status").html("Please wait...");
-                var jqxhr = $.get("?q=" + command, function(data) {
-                    $("#" + command + "-status").html(data);
-                }).fail(function() {
-                    $("#" + command + "-status").html("Request Error.");
-                });
-            }
+            $( document ).ready(function() {
+                $('.autoform').submit(function(event) {
+                    var thestatus = $('.status',this);
+                    event.preventDefault();
+                    thestatus.html("Please wait...");
 
-            function DoPOST(command) {
-                $("#" + command + "-status").html("Please wait...");
-                var jqxhr = $.post("?", {
-                    command: command
-                }, function(data) {
-                    $("#" + command + "-status").html(data);
-                }).fail(function() {
-                    $("#" + command + "-status").html("Request Error.");
-                });
-            }
+                    var postData = $(this).serialize() + '&command=' + this.id;
+                    console.log(postData);
 
-            function MakeButton(command, text) {
-                $("#controls").append("<p><button id=\"" + command + "-button\" onclick=\"DoPOST('" + command + "')\">" + text + "</button> <span id=\"" + command + "-status\"></span></p>");
+                    var posting = $.post("?", postData)
+                    .done(function(data) {
+                        thestatus.html(data);
+                    })
+                    .fail(function(data) {
+                        thestatus.html("Request Error.");
+                    });
+                });
+            });
+
+            function EasyButton(command, text) {
+                $("#easybuttons").append("<form id=\"" + command + "\" class=\"autoform\"><input type=\"submit\" value=\"" + text + "\"/> <span class=\"status\"></span></form>");
             }
 
         </script>
@@ -279,28 +278,30 @@ if(isset($_POST["command"])){
     </head>
 
     <body>
-        <div id="info">
+        <p>
             <?php 
             echo "IP: ".$_SERVER['SERVER_ADDR']."<br>";
             echo "PHP: ". phpversion()."<br>";
             echo "HTTP: ".$_SERVER['SERVER_SOFTWARE']."<br>";
             echo "Host: ".php_uname()."<br>"; 
             ?>
-        </div>
-        <div id="controls">
-            <script>
-                MakeButton('backupdb', 'Backup Database');
-                MakeButton('backupzip', 'Backup Files');
-                MakeButton('restorearchive', 'Restore Archive');
-                MakeButton('restoredb', 'Restore Database');
-                MakeButton('deletedbfile', 'Delete DB File');
-                MakeButton('deletearchive', 'Delete Archive');
-                MakeButton('deleteself', 'Delete This Script');
-                MakeButton('installwp', 'Install Wordpress');
+        </p>
 
-            </script>
-        </div>
-        <form action="?q=updatecreds" id="credsform">
+        <span id="easybuttons"></span>
+        <script>
+            EasyButton('backupdb', 'Backup Database');
+            EasyButton('backupzip', 'Backup Files');
+            EasyButton('restorearchive', 'Restore Archive');
+            EasyButton('restoredb', 'Restore Database');
+            EasyButton('deletedbfile', 'Delete DB File');
+            EasyButton('deletearchive', 'Delete Archive');
+            EasyButton('deleteself', 'Delete This Script');
+            EasyButton('installwp', 'Install Wordpress');
+
+        </script>
+
+
+        <form id="updatecreds" class="autoform">
             <p>
                 <input type="text" name="n" placeholder="DB_NAME (<?php echo wpconfig(" DB_NAME "); ?>)"/>
             </p>
@@ -311,62 +312,29 @@ if(isset($_POST["command"])){
                 <input type="text" name="p" placeholder="DB_PASSWORD (Clear text!!!)" />
             </p>
             <p>
-                <input id="updatecreds-button" type="submit" value="Update Config" /> <span id="updatecreds-status"></span></p>
-            <script>
-                $("#credsform").submit(function(event) {
-                    event.preventDefault();
-                    $("#updatecreds-status").html("Please wait...");
-                    var $form = $(this),
-                        url = $form.attr("action");
-                    var posting = $.post(url, $form.serialize());
-                    posting.done(function(data) {
-                        $("#updatecreds-status").html(data);
-                    });
-                });
-
-            </script>
+                <input type="submit" value="Update Config" /> <span id="status"></span>
+            </p>
         </form>
-        <form action="?q=downloadremote" id="downloadremote">
+
+        <form id="downloadremote" class="autoform">
             <p>
                 <input type="text" name="url" placeholder="http://" />
             </p>
             <p>
-                <input id="downloadremote-button" type="submit" value="Download Remote Archive" /> <span id="downloadremote-status"></span></p>
-            <script>
-                $("#downloadremote").submit(function(event) {
-                    event.preventDefault();
-                    $("#downloadremote-status").html("Please wait...");
-                    var $form = $(this),
-                        url = $form.attr("action");
-                    var posting = $.post(url, $form.serialize());
-                    posting.done(function(data) {
-                        $("#downloadremote-status").html(data);
-                    });
-                });
-
-            </script>
+                <input type="submit" value="Download Remote Archive" /> <span class="status"></span>
+            </p>
         </form>
-        <form action="?q=installplugins" id="installplugins">
+
+        <form id="installplugins" class="autoform">
             <p>
-                <textarea rows="4" cols="50" name="list">advanced-code-editor,tinymce-advanced,better-wp-security,stops-core-theme-and-plugin-updates,w3-total-cache,autoptimize,wordpress-seo,disable-emojis,google-sitemap-generator,seo-redirection,disable-visual-editor-wysiwyg,google-analytics-dashboard-for-wp,maintenance,ninja-forms,show-private,advanced-custom-fields</textarea>
+                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance</textarea>
             </p>
             <p>
-                <input id="installplugins-button" type="submit" value="Install Plugins" /> <span id="installplugins-status"></span></p>
-            <script>
-                $("#installplugins").submit(function(event) {
-                    event.preventDefault();
-                    $("#installplugins-status").html("Please wait...");
-                    var $form = $(this),
-                        url = $form.attr("action");
-                    var posting = $.post(url, $form.serialize());
-                    posting.done(function(data) {
-                        $("#installplugins-status").html(data);
-                    });
-                });
-
-            </script>
+                <input type="submit" value="Install Plugins" /> <span id="status"></span>
+            </p>
         </form>
-        <p></p>
+
+
     </body>
 
 </html>
@@ -419,7 +387,7 @@ function download_extract($url, $destination){
     curl_setopt($ch, CURLOPT_FILE, $zipResource);
     $return = curl_exec($ch);
     curl_close($ch);
- 
+
     if(!$return) {
         //echo "Failed. ".curl_error($ch);
         return FALSE;
