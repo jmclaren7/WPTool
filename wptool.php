@@ -230,6 +230,9 @@ if(isset($_POST["command"])){
                 echo "(".$error." failed)";
             }
             break;
+        case "phpinfo":
+            phpinfo();
+            break;
 
         default:
             echo "Invalid Command.";
@@ -280,10 +283,10 @@ if(isset($_POST["command"])){
     <body>
         <p>
             <?php 
-            echo "IP: ".$_SERVER['SERVER_ADDR']."<br>";
+            echo "Host: ".$_SERVER['SERVER_ADDR']." (".gethostbyaddr($_SERVER['SERVER_ADDR']).")<br>";
+            echo "Host Info: ".php_uname()."<br>"; 
             echo "PHP: ". phpversion()."<br>";
             echo "HTTP: ".$_SERVER['SERVER_SOFTWARE']."<br>";
-            echo "Host: ".php_uname()."<br>"; 
             ?>
         </p>
 
@@ -297,7 +300,7 @@ if(isset($_POST["command"])){
             EasyButton('deletearchive', 'Delete Archive');
             EasyButton('deleteself', 'Delete This Script');
             EasyButton('installwp', 'Install Wordpress');
-
+            EasyButton('phpinfo','Show PHP Information');
         </script>
 
 
@@ -449,13 +452,10 @@ function wpconfig($name, $value=""){
     $configfile = "wp-config.php";
     if(file_exists($configfile)){
         $file_contents = file_get_contents($configfile);
-
         $search="'$name'";
         $start = strpos($file_contents, "'", strpos($file_contents, $search) + strlen($search)) + 1;
         $stop = strpos($file_contents, "'", $start);
         $length = $stop - $start;
-
-
 
         if(empty($value)){
             return substr($file_contents, $start, $length); 
