@@ -4,318 +4,373 @@ header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Cache-Control: post-check=0, pre-check=0', FALSE);
 header('Pragma: no-cache');
 
+$BackupName=basename(__FILE__, '.php');
 
-if(!isset($_GET["q"])){
+if(isset($_POST["command"])){
+    $command = $_POST["command"];
+    //echo $command;
+
+    switch($command){
+        case "downloadremote":
+            if(empty($_POST["url"])){
+                echo "Missing parameters.";
+
+            }else{
+                set_time_limit(0);
+                $fp = fopen ($BackupName.'.zip', 'w+');
+                $ch = curl_init($_POST["url"]);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 50);
+                curl_setopt($ch, CURLOPT_FILE, $fp); 
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);      
+                $return = curl_exec($ch); 
+                curl_close($ch);
+                fclose($fp);
+
+                if($return===TRUE){
+                    echo "Success. ";
+                }else{
+                    echo "Failed. ";
+                }
+            }
+            break;
+
+        case "backupdb":      
+            $DB_HOST = wpconfig("DB_HOST");
+            $DB_USER = wpconfig("DB_USER");
+            $DB_PASSWORD = wpconfig("DB_PASSWORD");
+            $DB_NAME = wpconfig("DB_NAME");
+
+            //if(DBExport(DB_HOST,DB_USER,DB_PASSWORD,DB_NAME, $BackupName.".sql")){
+            if(EXPORT_TABLES($DB_HOST,$DB_USER,$DB_PASSWORD,$DB_NAME, false, $BackupName.".sql")){
+                echo "Success. ";
+            }else{
+                echo "Failed. ";
+            }
+            break;
 
 
+        case "backupzip":
+            //set_time_limit (60);
 
+            //$base=dirname(__FILE__);
+            //exec("tar --exclude='$base/$BackupName.tar' --exclude='$base/$BackupName.tar.gz' --exclude='$base/$BackupName.php' --exclude='$base/.well-known' -czf $BackupName.tar.gz $base/", $return);
+            //exit;
+
+            if(class_exists('ZipArchive')){
+                $rootPath = realpath('./');
+                //echo "Debug<br>Root: ".$rootPath;
+
+                $zip = new ZipArchive();
+                $zip->open($BackupName.'.zip', ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+                // Create recursive directory iterator
+                $filter = array('..');
+                $skip_files = array($BackupName.".zip",$BackupName.".php");
+                $skip_folders = array('.well-known','stats','phpmyadmin');
+
+                $file_count=0;
+                $skip_count=0;
+
+                $files = new RecursiveIteratorIterator(
+                    new RecursiveCallbackFilterIterator(
+                        new RecursiveDirectoryIterator($rootPath),
+                        function ($fileInfo, $key, $iterator) use ($filter) {
+                            return !in_array($fileInfo->getBaseName(), $filter);
+                            //echo $fileInfo;
+                        }
+                    )
+                );
+
+                foreach ($files as $file){
+                    // Get real and relative path for current file
+                    $filePath = $file->getRealPath();
+                    $relativePath = substr($filePath, strlen($rootPath) + 1);
+                    $filename = basename($filePath);
+                    //echo "<br>file=".$file." - filepath=".$filePath." - relativepath=".$relativePath." - filename=".$filename;
+
+                    $skip_for_folder = false;
+                    foreach($skip_folders as $skip_folder){
+                        if(strstr($file,"/".$skip_folder."/")){
+                            $skip_for_folder = true;
+                        }
+                    }
+
+                    // Skip known files we dont want
+                    if(in_array($filename,$skip_files)){
+                        $skip_count++;
+                        //echo " > Skipped";
+
+                    }elseif($skip_for_folder){
+                        //$skip_count++;
+                        //echo " > Skipped (Folder)";
+
+                    }else{
+                        // Skip directories, they will be created in the zip when a subfile is added
+                        if ($file->isDir()){
+                            $zip->addEmptyDir ($relativePath);
+                        }else{
+                            $file_count++;
+                            // Add current file to archive
+                            $zip->addFile($filePath, $relativePath);
+                        }
+                    }// end filter
+
+                }// foreach $files
+
+                // Zip archive will be created only after closing object
+                $zip->close();
+
+                //echo "<br>";
+                echo "$file_count files archived. $skip_count files skipped. <a href=\"$BackupName.zip\">Download Archive</a>";
+            }else{
+                echo "PHP Archive Library Not Available";
+            }// if archive class exists
+
+            break;
+
+        case "restorearchive":
+            $zip = new ZipArchive;
+
+            if ($zip->open($BackupName.".zip") === TRUE) {
+                $zip->extractTo('./');
+                $zip->close();
+                echo 'Success.';
+
+            } else {
+                echo 'Failed.';
+            }
+            break;
+
+        case "restoredb":
+
+            $DB_HOST = wpconfig("DB_HOST");
+            $DB_USER = wpconfig("DB_USER");
+            $DB_PASSWORD = wpconfig("DB_PASSWORD");
+            $DB_NAME = wpconfig("DB_NAME");
+
+            if(!file_exists($BackupName.".sql")){
+                echo "Failed, file doesn't exist.";
+
+            }elseif(IMPORT_TABLES($DB_HOST,$DB_USER,$DB_PASSWORD,$DB_NAME, $BackupName.".sql")){
+                echo "Success.";
+
+            }else{
+                echo "Failed.";
+            }
+            break;
+
+        case "deletedbfile":
+            if(unlink("./".$BackupName.".sql")){
+                echo "Success.";
+
+            }else{
+                echo "Failed.";
+            }
+            break;
+
+        case "deletearchive":
+            if(unlink("./".$BackupName.".zip")){
+                echo "Success.";
+
+            }else{
+                echo "Failed.";
+            }
+            break;
+
+        case "deleteself":
+            if(unlink("./".$BackupName.".php")){
+                echo "Success.";
+
+            }else{
+                echo "Failed.";
+            }
+            break;
+
+        case "updatecreds":
+            if(empty($_POST["n"]) || empty($_POST["u"]) || empty($_POST["p"])){
+                echo "Missing parameters.";
+
+            }elseif(wpconfig("DB_USER",$_POST["u"]) && wpconfig("DB_PASSWORD", $_POST["p"]) && wpconfig("DB_NAME", $_POST["n"])){
+                echo "Success.";
+
+            }else{
+                echo "Failed.";
+            }
+            break;
+
+        case "installwp";
+            if(install_wp()){
+                echo "Success. <a href=\"index.php\">Open</a>";
+
+            }else{
+                echo "Failed.";
+            }
+            break;
+
+        case "installplugins":
+            $count = 0;
+            $error = 0;
+
+            if(empty($_POST["list"])){
+                echo "Nothing Selected. ";
+            }else{
+                $array = explode (",", $_POST["list"]);
+                foreach ($array as $plugin) {
+                    if(get_plugin($plugin)){
+                        $count++;
+                    }else{
+                        $error++;
+                    }
+                }
+
+            }
+
+            echo "Installed ".$count.". ";
+            if($error){
+                echo "(".$error." failed)";
+            }
+            break;
+
+        default:
+            echo "Invalid Command.";
+            break;
+    }//end switch
+
+    exit;
+}
 ?>
 <html>
-    <head> 
+
+    <head>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.css" />
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
         <script>
             function Do(command) {
-                $("#"+command+"-status").html("Please wait...");
-                var jqxhr = $.get("?q="+command,function(data){
-                    $("#"+command+"-status").html(data);
-
-                })
-                .fail(function() {
-                    $("#"+command+"-status").html("Request Error.");
+                $("#" + command + "-status").html("Please wait...");
+                var jqxhr = $.get("?q=" + command, function(data) {
+                    $("#" + command + "-status").html(data);
+                }).fail(function() {
+                    $("#" + command + "-status").html("Request Error.");
                 });
             }
-            function MakeButton(command, text){
-                $( "#controls" ).append( "<p><button id=\""+command+"-button\" onclick=\"Do('"+command+"')\">"+text+"</button> <span id=\""+command+"-status\"></span></p>" );
-            }
-        </script>
 
+            function DoPOST(command) {
+                $("#" + command + "-status").html("Please wait...");
+                var jqxhr = $.post("?", {
+                    command: command
+                }, function(data) {
+                    $("#" + command + "-status").html(data);
+                }).fail(function() {
+                    $("#" + command + "-status").html("Request Error.");
+                });
+            }
+
+            function MakeButton(command, text) {
+                $("#controls").append("<p><button id=\"" + command + "-button\" onclick=\"DoPOST('" + command + "')\">" + text + "</button> <span id=\"" + command + "-status\"></span></p>");
+            }
+
+        </script>
         <style>
-            body{
+            body {
                 margin: 10px;
             }
 
         </style>
     </head>
 
-    <body> 
+    <body>
         <div id="info">
             <?php 
-    echo "IP: ".$_SERVER['SERVER_ADDR']."<br>";
-    echo "PHP: ". phpversion()."<br>";
-    echo "HTTP: ".$_SERVER['SERVER_SOFTWARE']."<br>";
-    echo "Host: ".php_uname()."<br>"; 
+            echo "IP: ".$_SERVER['SERVER_ADDR']."<br>";
+            echo "PHP: ". phpversion()."<br>";
+            echo "HTTP: ".$_SERVER['SERVER_SOFTWARE']."<br>";
+            echo "Host: ".php_uname()."<br>"; 
             ?>
         </div>
-
         <div id="controls">
             <script>
-                MakeButton('backupdb','Backup Database');
-                MakeButton('backupzip','Backup Files');
-                MakeButton('restorearchive','Restore Archive');
-                MakeButton('restoredb','Restore Database');
-                MakeButton('deletedbfile','Delete DB File');
-                MakeButton('deletearchive','Delete Archive');
-                MakeButton('deleteself','Delete This Script');
-                MakeButton('installwp','Install Wordpress');
+                MakeButton('backupdb', 'Backup Database');
+                MakeButton('backupzip', 'Backup Files');
+                MakeButton('restorearchive', 'Restore Archive');
+                MakeButton('restoredb', 'Restore Database');
+                MakeButton('deletedbfile', 'Delete DB File');
+                MakeButton('deletearchive', 'Delete Archive');
+                MakeButton('deleteself', 'Delete This Script');
+                MakeButton('installwp', 'Install Wordpress');
+
             </script>
         </div>
-
         <form action="?q=updatecreds" id="credsform">
-            <p><input type = "text" name = "n" placeholder="DB_NAME (<?php echo wpconfig("DB_NAME"); ?>)"/></p>
-            <p><input type = "text" name = "u" placeholder="DB_USER (<?php echo wpconfig("DB_USER"); ?>)"/></p>
-            <p><input type = "text" name = "p" placeholder="DB_PASSWORD (Clear text!!!)"/></p>
-            <p><input id="updatecreds-button" type="submit" value="Update Config"/> <span id="updatecreds-status"></span></p>
+            <p>
+                <input type="text" name="n" placeholder="DB_NAME (<?php echo wpconfig(" DB_NAME "); ?>)"/>
+            </p>
+            <p>
+                <input type="text" name="u" placeholder="DB_USER (<?php echo wpconfig(" DB_USER "); ?>)"/>
+            </p>
+            <p>
+                <input type="text" name="p" placeholder="DB_PASSWORD (Clear text!!!)" />
+            </p>
+            <p>
+                <input id="updatecreds-button" type="submit" value="Update Config" /> <span id="updatecreds-status"></span></p>
             <script>
-                $( "#credsform" ).submit(function( event ) {
+                $("#credsform").submit(function(event) {
                     event.preventDefault();
                     $("#updatecreds-status").html("Please wait...");
-                    var $form = $( this ), url = $form.attr( "action" );
-                    var posting = $.post( url, $form.serialize() );
-                    posting.done(function( data ) { $("#updatecreds-status").html(data); });
+                    var $form = $(this),
+                        url = $form.attr("action");
+                    var posting = $.post(url, $form.serialize());
+                    posting.done(function(data) {
+                        $("#updatecreds-status").html(data);
+                    });
                 });
+
             </script>
         </form>
-
         <form action="?q=downloadremote" id="downloadremote">
-            <p><input type = "text" name = "url" placeholder="http://"/></p>
-            <p><input id="downloadremote-button" type="submit" value="Download Remote Archive"/> <span id="downloadremote-status"></span></p>
+            <p>
+                <input type="text" name="url" placeholder="http://" />
+            </p>
+            <p>
+                <input id="downloadremote-button" type="submit" value="Download Remote Archive" /> <span id="downloadremote-status"></span></p>
             <script>
-                $( "#downloadremote" ).submit(function( event ) {
+                $("#downloadremote").submit(function(event) {
                     event.preventDefault();
                     $("#downloadremote-status").html("Please wait...");
-                    var $form = $( this ), url = $form.attr( "action" );
-                    var posting = $.post( url, $form.serialize() );
-                    posting.done(function( data ) { $("#downloadremote-status").html(data); });
+                    var $form = $(this),
+                        url = $form.attr("action");
+                    var posting = $.post(url, $form.serialize());
+                    posting.done(function(data) {
+                        $("#downloadremote-status").html(data);
+                    });
                 });
+
             </script>
         </form>
-
         <form action="?q=installplugins" id="installplugins">
-            <p><textarea rows="4" cols="50" name="list" >advanced-code-editor,tinymce-advanced,better-wp-security,stops-core-theme-and-plugin-updates,w3-total-cache,autoptimize,wordpress-seo,disable-emojis,google-sitemap-generator,seo-redirection,disable-visual-editor-wysiwyg,google-analytics-dashboard-for-wp,maintenance,ninja-forms,show-private,advanced-custom-fields</textarea></p>
-            <p><input id="installplugins-button" type="submit" value="Install Plugins"/> <span id="installplugins-status"></span></p>
+            <p>
+                <textarea rows="4" cols="50" name="list">advanced-code-editor,tinymce-advanced,better-wp-security,stops-core-theme-and-plugin-updates,w3-total-cache,autoptimize,wordpress-seo,disable-emojis,google-sitemap-generator,seo-redirection,disable-visual-editor-wysiwyg,google-analytics-dashboard-for-wp,maintenance,ninja-forms,show-private,advanced-custom-fields</textarea>
+            </p>
+            <p>
+                <input id="installplugins-button" type="submit" value="Install Plugins" /> <span id="installplugins-status"></span></p>
             <script>
-                $( "#installplugins" ).submit(function( event ) {
+                $("#installplugins").submit(function(event) {
                     event.preventDefault();
                     $("#installplugins-status").html("Please wait...");
-                    var $form = $( this ), url = $form.attr( "action" );
-                    var posting = $.post( url, $form.serialize() );
-                    posting.done(function( data ) { $("#installplugins-status").html(data); });
+                    var $form = $(this),
+                        url = $form.attr("action");
+                    var posting = $.post(url, $form.serialize());
+                    posting.done(function(data) {
+                        $("#installplugins-status").html(data);
+                    });
                 });
+
             </script>
         </form>
-
         <p></p>
     </body>
 
 </html>
-<?php
-}else{
-
-    $BackupName=basename(__FILE__, '.php');
-
-
-    if($_GET["q"]=="downloadremote"){
-        if(empty($_POST["url"])){
-            echo "Missing parameters.";
-
-        }else{
-            set_time_limit(0);
-            $fp = fopen ($BackupName.'.zip', 'w+');
-            $ch = curl_init($_POST["url"]);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 50);
-            curl_setopt($ch, CURLOPT_FILE, $fp); 
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);      
-            $return = curl_exec($ch); 
-            curl_close($ch);
-            fclose($fp);
-
-            if($return===TRUE){
-                echo "Success. ";
-            }else{
-                echo "Failed. ";
-            }
-        }
-
-
-    }elseif($_GET["q"]=="backupdb"){        
-        $DB_HOST = wpconfig("DB_HOST");
-        $DB_USER = wpconfig("DB_USER");
-        $DB_PASSWORD = wpconfig("DB_PASSWORD");
-        $DB_NAME = wpconfig("DB_NAME");
-
-        //if(DBExport(DB_HOST,DB_USER,DB_PASSWORD,DB_NAME, $BackupName.".sql")){
-        if(EXPORT_TABLES($DB_HOST,$DB_USER,$DB_PASSWORD,$DB_NAME, false, $BackupName.".sql")){
-            echo "Success. ";
-        }else{
-            echo "Failed. ";
-        }
-
-
-    }elseif($_GET["q"]=="backupzip"){
-        //set_time_limit (60);
-
-        //$base=dirname(__FILE__);
-        //exec("tar --exclude='$base/$BackupName.tar' --exclude='$base/$BackupName.tar.gz' --exclude='$base/$BackupName.php' --exclude='$base/.well-known' -czf $BackupName.tar.gz $base/", $return);
-        //exit;
-
-        if(function_exists ("ZipArchive")){
-            $rootPath = realpath('./');
-            $zip = new ZipArchive();
-            $zip->open($BackupName.'.zip', ZipArchive::CREATE | ZipArchive::OVERWRITE);
-
-            // Create recursive directory iterator
-            /** @var SplFileInfo[] $files */
-            $files = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($rootPath),
-                RecursiveIteratorIterator::LEAVES_ONLY
-            );
-
-            $file_count=0;
-            $skip_count=0;
-
-            foreach ($files as $name => $file)
-            {
-                // Skip directories (they would be added automatically)
-                if (!$file->isDir())
-                {
-                    // Get real and relative path for current file
-                    $filePath = $file->getRealPath();
-                    $relativePath = substr($filePath, strlen($rootPath) + 1);
-                    $filename = basename($relativePath);
-                    $topdir = dirname($relativePath,100);
-
-                    //echo "".strpos($relativePath, "phpmyadmin/")." --> ".$relativePath."<br/>";
-
-                    if(strpos($relativePath, "phpmyadmin/")===0 OR 
-                       strpos($relativePath, "stats/")===0 OR 
-                       strpos($relativePath, ".well-known/")===0 OR
-                       $relativePath == $BackupName.".zip" OR
-                       $relativePath == $BackupName.".php" OR
-                       $relativePath == "info.php"
-
-                      ){
-                        $skip_count++;
-                        //echo "Skip: ".$topdir." --> ".$relativePath."<br/>";
-
-                    }else{
-                        $file_count++;
-                        // Add current file to archive
-                        $zip->addFile($filePath, $relativePath);
-                    }
-
-
-                }
-            }
-
-            // Zip archive will be created only after closing object
-            $zip->close();
-
-            echo "$file_count files archived. $skip_count files skipped. <a href=\"$BackupName.zip\">Download Archive</a>";
-        }else{
-            echo "PHP Archive Library Not Available";
-        }
-
-    }elseif($_GET["q"]=="restorearchive"){
-        $zip = new ZipArchive;
-
-        if ($zip->open($BackupName.".zip") === TRUE) {
-            $zip->extractTo('./');
-            $zip->close();
-            echo 'Success.';
-
-        } else {
-            echo 'Failed.';
-        }
-
-
-    }elseif($_GET["q"]=="restoredb"){
-
-        $DB_HOST = wpconfig("DB_HOST");
-        $DB_USER = wpconfig("DB_USER");
-        $DB_PASSWORD = wpconfig("DB_PASSWORD");
-        $DB_NAME = wpconfig("DB_NAME");
-
-        if(!file_exists($BackupName.".sql")){
-            echo "Failed, file doesn't exist.";
-
-        }elseif(IMPORT_TABLES($DB_HOST,$DB_USER,$DB_PASSWORD,$DB_NAME, $BackupName.".sql")){
-            echo "Success.";
-
-        }else{
-            echo "Failed.";
-        }
-
-    }elseif($_GET["q"]=="deletedbfile"){
-        if(unlink("./".$BackupName.".sql")){
-            echo "Success.";
-
-        }else{
-            echo "Failed.";
-        }
-
-    }elseif($_GET["q"]=="deletearchive"){
-        if(unlink("./".$BackupName.".zip")){
-            echo "Success.";
-
-        }else{
-            echo "Failed.";
-        }
-
-    }elseif($_GET["q"]=="deleteself"){
-        if(unlink("./".$BackupName.".php")){
-            echo "Success.";
-
-        }else{
-            echo "Failed.";
-        }
-
-    }elseif($_GET["q"]=="updatecreds"){
-        if(empty($_POST["n"]) || empty($_POST["u"]) || empty($_POST["p"])){
-            echo "Missing parameters.";
-
-        }elseif(wpconfig("DB_USER",$_POST["u"]) && wpconfig("DB_PASSWORD", $_POST["p"]) && wpconfig("DB_NAME", $_POST["n"])){
-            echo "Success.";
-
-        }else{
-            echo "Failed.";
-        }
-    }elseif($_GET["q"]=="installwp"){
-        if(install_wp()){
-            echo "Success. <a href=\"index.php\">Open</a>";
-
-        }else{
-            echo "Failed.";
-        }
-
-    }elseif($_GET["q"]=="installplugins"){
-        $count = 0;
-        $error = 0;
-
-        if(empty($_POST["list"])){
-            echo "Nothing Selected. ";
-        }else{
-            $array = explode (",", $_POST["list"]);
-            foreach ($array as $plugin) {
-                if(get_plugin($plugin)){
-                    $count++;
-                }else{
-                    $error++;
-                }
-            }
-
-        }
-
-        echo "Installed ".$count.". ";
-        if($error){
-            echo "(".$error." failed)";
-        }
-
-    }else{
-        echo "Invalid Command.";
-    }
-}
-
+<?PHP
 //=================================================================================================
 //=================================================================================================
 function install_wp(){
@@ -364,7 +419,7 @@ function download_extract($url, $destination){
     curl_setopt($ch, CURLOPT_FILE, $zipResource);
     $return = curl_exec($ch);
     curl_close($ch);
-
+ 
     if(!$return) {
         //echo "Failed. ".curl_error($ch);
         return FALSE;
