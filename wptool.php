@@ -246,7 +246,6 @@ if(isset($_POST["command"])){
 
     <head>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.css" />
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
         <script>
             $( document ).ready(function() {
                 $('.autoform').submit(function(event) {
