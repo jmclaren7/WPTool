@@ -331,7 +331,7 @@ if(isset($_POST["command"])){
 
         <form id="installplugins" class="autoform">
             <p>
-                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance</textarea>
+                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance,w3-total-cache,wordfence</textarea>
             </p>
             <p>
                 <input type="submit" value="Install Plugins" /> <span id="status"></span>
