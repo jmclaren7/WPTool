@@ -330,7 +330,7 @@ echo "Root: " . $_SERVER['DOCUMENT_ROOT'];
 
         <form id="installplugins" class="autoform">
             <p>
-                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance,w3-total-cache,wordfence</textarea>
+                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance,w3-total-cache,wordfence,really-simple-ssl</textarea>
             </p>
             <p>
                 <input type="submit" value="Install Plugins" /> <span id="status"></span>
