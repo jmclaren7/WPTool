@@ -48,6 +48,20 @@ if (isset($_POST["command"])) {
             }
             break;
 
+        case "deleteextra"
+            unlink("./robots.txt")
+            unlink("./index.html")
+            unlink("./readme.html")
+            unlink("./license.txt")
+
+            if () {
+                echo "Success.";
+
+            } else {
+                echo "Failed.";
+            }
+            break;
+
         case "backupzip":
             //set_time_limit (60);
 
@@ -330,7 +344,7 @@ echo "Root: " . $_SERVER['DOCUMENT_ROOT'];
 
         <form id="installplugins" class="autoform">
             <p>
-                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance,w3-total-cache,wordfence,really-simple-ssl</textarea>
+                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance,w3-total-cache,wordfence,simple-history,ga-in</textarea>
             </p>
             <p>
                 <input type="submit" value="Install Plugins" /> <span id="status"></span>
