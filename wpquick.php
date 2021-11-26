@@ -30,7 +30,7 @@ get_plugin("maintenance");
 get_plugin("w3-total-cache");
 get_plugin("simple-history");
 get_plugin("wordfence");
-get_plugin("ga-in");
+get_plugin("analytics-insights");
 
 
 print "Removing wpsetup.php (this script)\n";
