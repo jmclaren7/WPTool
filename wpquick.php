@@ -17,7 +17,7 @@ if(file_exists($DownloadFolder."/wp-content")){
   rrmdir($DownloadFolder."/wordpress/wp-content");
 }
 
-print "Moving files from sub solder to parent folder\n";
+print "Moving files from sub folder to parent folder\n";
 recurse_move($DownloadFolder."/wordpress","./");
 
 print "Removeing empty wordpress sub directory\n";
