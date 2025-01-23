@@ -48,13 +48,14 @@ if (isset($_POST["command"])) {
             }
             break;
 
-        case "deleteextra"
-            unlink("./robots.txt")
-            unlink("./index.html")
-            unlink("./readme.html")
-            unlink("./license.txt")
+        case "deleteextra":
+            unlink("./robots.txt");
+            unlink("./index.html");
+            unlink("./readme.html");
+            unlink("./license.txt");
+            unlink("./wp-content/plugins/hello.php");
 
-            if () {
+            if (false) {
                 echo "Success.";
 
             } else {
@@ -344,7 +345,7 @@ echo "Root: " . $_SERVER['DOCUMENT_ROOT'];
 
         <form id="installplugins" class="autoform">
             <p>
-                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance,w3-total-cache,wordfence,simple-history,ga-in</textarea>
+                <textarea rows="4" cols="50" name="list">stops-core-theme-and-plugin-updates,maintenance,w3-total-cache,better-wp-security,simple-history,analytics-insights,worker,copy-delete-posts,post-expirator,redirection</textarea>
             </p>
             <p>
                 <input type="submit" value="Install Plugins" /> <span id="status"></span>
@@ -381,11 +382,11 @@ function install_wp()
     recurse_unlink($DownloadFolder);
 
     return true;
-}
+}https://downloads.wordpress.org/plugin/copy-delete-posts.latest-stable.zip
 
 function get_plugin($plugin)
 {
-    return download_extract("https://downloads.wordpress.org/plugin/" . $plugin . ".zip", "./wp-content/plugins");
+    return download_extract("https://downloads.wordpress.org/plugin/" . $plugin . ".latest-stable.zip", "./wp-content/plugins");
 
 }
 
